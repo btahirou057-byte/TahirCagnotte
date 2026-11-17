@@ -1,0 +1,62 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <meta name="theme-color" content="#087F5B">
+
+  <title>TahirCagnotte</title>
+
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+
+<body>
+
+  <header class="header">
+    <h2>💚 TahirCagnotte</h2>
+    <button id="loginBtn">Connexion</button>
+  </header>
+
+  <main>
+
+    <section class="hero">
+      <h1>Ensemble, réalisons vos projets !</h1>
+      <p>
+        Créez votre cagnotte, partagez votre lien
+        et recevez le soutien de vos proches.
+      </p>
+
+      <button id="createBtn">
+        + Créer une cagnotte
+      </button>
+    </section>
+
+    <section class="account-section" id="accountSection">
+      <h2>Bienvenue sur TahirCagnotte</h2>
+      <p>Connectez-vous pour gérer vos cagnottes.</p>
+    </section>
+
+    <section class="campaigns">
+      <h2>Cagnottes populaires</h2>
+
+      <div id="campaignList">
+        <p>Aucune cagnotte pour le moment.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <nav class="bottom-nav">
+    <button id="homeBtn">🏠 Accueil</button>
+    <button id="exploreBtn">🔎 Explorer</button>
+    <button id="myCampaignsBtn">💰 Mes cagnottes</button>
+    <button id="profileBtn">👤 Profil</button>
+  </nav>
+
+  <script type="module" src="app.js"></script>
+
+</body>
+</html>
