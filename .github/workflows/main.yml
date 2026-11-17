@@ -23,6 +23,15 @@ jobs:
           npx cap init TahirCagnotte com.tahir.cagnotte --web-dir=www
           npx cap add android
           npx cap sync android
+      - name: Corriger classes en double
+        run: |
+          cat >> android/app/build.gradle <<'EOF'
+
+          configurations.all {
+              exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'
+              exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8'
+          }
+          EOF
       - name: Build
         run: |
           cd android
