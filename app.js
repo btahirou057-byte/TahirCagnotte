@@ -1,13 +1,18 @@
 import {
-  auth, registerUser, loginUser, logoutUser, observeUser,
-  resetPassword, uploadCover, createCampaign, getCampaigns
+  auth, db, registerUser, loginUser, logoutUser, observeUser,
+  resetPassword, uploadCover, createCampaign, getCampaigns, getCampaign
 } from "./firebase.js";
+import {
+  collection, query, where, limit, getDocs
+} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
+const BASE_URL = "https://btahirou057-byte.github.io/TahirCagnotte/";
 const CATEGORIES = ["Santé", "Éducation", "Mariage", "Solidarité", "Famille", "Mosquée", "Projets", "Urgences"];
 const $ = id => document.getElementById(id);
 
 let currentUser = null;
 let campaigns = [];
+let currentCampaign = null;
 let filterCat = "";
 let searchText = "";
 let onlyMine = false;
@@ -34,6 +39,11 @@ function daysLeft(endDate) {
   return d < 0 ? "Terminée" : d + " j restants";
 }
 
+function getById(id) {
+  return campaigns.find(x => x.id === id) ||
+    (currentCampaign && currentCampaign.id === id ? currentCampaign : null);
+}
+
 /* ---------- THEME ---------- */
 function applyTheme(t) {
   document.documentElement.dataset.theme = t;
@@ -58,6 +68,18 @@ document.addEventListener("click", e => {
   if (c) closeModal(c.dataset.close);
   if (e.target.classList.contains("modal")) e.target.classList.add("hidden");
   if (e.target.closest("#logoutBtn")) doLogout();
+
+  const o = e.target.closest("[data-open]");
+  if (o) return openDetail(o.dataset.open);
+  const s = e.target.closest("[data-share]");
+  if (s) return openShare(s.dataset.share);
+  if (e.target.closest("[data-contribute]")) {
+    return toast("Le paiement sera bientôt disponible. Aucun don n'est enregistré pour l'instant.");
+  }
+  const cp = e.target.closest("[data-copy]");
+  if (cp) return copyLink(cp.dataset.copy);
+  const nt = e.target.closest("[data-native]");
+  if (nt) return nativeShareClick(nt.dataset.native);
 });
 
 /* ---------- COMPTE ---------- */
@@ -232,15 +254,18 @@ $("createForm").addEventListener("submit", async e => {
 });
 
 /* ---------- AFFICHAGE ---------- */
+function coverImg(c, cls) {
+  return /^https:\/\//.test(c.coverUrl || "")
+    ? `<img class="${cls}" src="${esc(c.coverUrl)}" alt="" loading="lazy">` : "";
+}
+
 function cardHTML(c) {
   const goal = Number(c.goal) || 1;
   const collected = Number(c.collected) || 0;
   const pct = Math.min(100, Math.round((collected / goal) * 100));
-  const cover = /^https:\/\//.test(c.coverUrl || "")
-    ? `<img class="cover" src="${esc(c.coverUrl)}" alt="" loading="lazy">` : "";
   return `
     <div class="campaign-card">
-      ${cover}
+      ${coverImg(c, "cover")}
       <span class="chip-cat">${esc(c.category || "Projets")}</span>
       <h3>${esc(c.title)}</h3>
       <p>${esc(String(c.description || "").slice(0, 140))}</p>
@@ -249,7 +274,10 @@ function cardHTML(c) {
       <p>Objectif : ${fcfa(goal)}</p>
       <div class="progress"><div class="progress-bar" style="width:${pct}%"></div></div>
       <p>${pct}% ${c.endDate ? "· " + esc(daysLeft(c.endDate)) : ""}</p>
-      <button type="button">Partager ma cagnotte</button>
+      <div class="btn-row">
+        <button type="button" data-open="${esc(c.id)}">Voir</button>
+        <button type="button" class="btn-light" data-share="${esc(c.id)}">Partager</button>
+      </div>
     </div>`;
 }
 
@@ -294,6 +322,121 @@ function render() {
   $("campaignList").innerHTML = list.length
     ? list.map(cardHTML).join("")
     : `<p class="empty">${onlyMine ? "Vous n'avez pas encore de cagnotte." : "Aucune cagnotte trouvée."}</p>`;
+}
+
+/* ---------- PAGE D'UNE CAGNOTTE ---------- */
+async function openDetail(id) {
+  let c = campaigns.find(x => x.id === id);
+  if (!c) {
+    try { c = await getCampaign(id); } catch (err) { console.error(err); }
+  }
+  if (!c) return toast("Cagnotte introuvable.");
+  currentCampaign = c;
+
+  const goal = Number(c.goal) || 1;
+  const collected = Number(c.collected) || 0;
+  const pct = Math.min(100, Math.round((collected / goal) * 100));
+
+  $("detailBox").innerHTML = `
+    ${coverImg(c, "detail-cover")}
+    <span class="chip-cat">${esc(c.category || "Projets")}</span>
+    <h2>${esc(c.title)}</h2>
+    <p>Organisateur : ${esc(c.ownerName)}</p>
+    <p style="margin:10px 0">${esc(c.description)}</p>
+    <div class="progress"><div class="progress-bar" style="width:${pct}%"></div></div>
+    <div class="detail-stats">
+      <div class="stat"><b>${fcfa(collected)}</b><span>collectés</span></div>
+      <div class="stat"><b>${fcfa(goal)}</b><span>objectif</span></div>
+      <div class="stat"><b>${Number(c.contributors) || 0}</b><span>contributeurs</span></div>
+    </div>
+    <p>${pct}% ${c.endDate ? "· " + esc(daysLeft(c.endDate)) : ""}</p>
+    <button class="btn-primary" type="button" data-contribute="1" style="margin-top:12px">💚 Contribuer</button>
+    <button class="btn-secondary" type="button" data-share="${esc(c.id)}">Partager</button>
+    <h3>Dernières contributions</h3>
+    <ul class="contrib-list" id="contribList"><li>Chargement...</li></ul>
+    <button class="btn-link" type="button" data-close="detailModal">Fermer</button>
+  `;
+  openModal("detailModal");
+  loadContributions(c.id);
+}
+
+async function loadContributions(id) {
+  const ul = $("contribList");
+  if (!ul) return;
+  try {
+    const snap = await getDocs(query(
+      collection(db, "campaigns", id, "contributions"),
+      where("status", "==", "confirmed"),
+      limit(10)
+    ));
+    const items = snap.docs.map(d => d.data())
+      .sort((a, b) => ((b.createdAt && b.createdAt.seconds) || 0) - ((a.createdAt && a.createdAt.seconds) || 0));
+    ul.innerHTML = items.length
+      ? items.map(i => `<li><span>${esc(i.name || "Anonyme")}</span><b>${fcfa(i.amount)}</b></li>`).join("")
+      : "<li>Aucune contribution pour le moment.</li>";
+  } catch (err) {
+    console.error(err);
+    ul.innerHTML = "<li>Impossible de charger les contributions.</li>";
+  }
+}
+
+/* ---------- PARTAGE + QR CODE ---------- */
+function shareData(c) {
+  return {
+    url: BASE_URL + "?c=" + encodeURIComponent(c.id),
+    text: "Aide-moi avec la cagnotte « " + c.title + " » sur TahirCagnotte"
+  };
+}
+
+function openShare(id) {
+  const c = getById(id);
+  if (!c) return;
+  const { url, text } = shareData(c);
+  const u = encodeURIComponent(url);
+  const t = encodeURIComponent(text);
+  const both = encodeURIComponent(text + " " + url);
+
+  $("shareBox").innerHTML = `
+    <h2>Partager la cagnotte</h2>
+    <p>${esc(c.title)}</p>
+    <div class="share-grid">
+      <a href="https://wa.me/?text=${both}" target="_blank" rel="noopener">WhatsApp</a>
+      <a href="https://www.facebook.com/sharer/sharer.php?u=${u}" target="_blank" rel="noopener">Facebook</a>
+      <a href="https://t.me/share/url?url=${u}&text=${t}" target="_blank" rel="noopener">Telegram</a>
+      <a href="fb-messenger://share/?link=${u}">Messenger</a>
+      <a href="sms:?body=${both}">SMS</a>
+      <button type="button" data-copy="${esc(c.id)}">TikTok (copier le lien)</button>
+      <button type="button" data-native="${esc(c.id)}">Autres applications</button>
+      <button type="button" data-copy="${esc(c.id)}">Copier le lien</button>
+    </div>
+    <div class="qr-box">
+      <img alt="QR code" width="220" height="220"
+        src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${u}">
+      <p>QR code de la cagnotte</p>
+    </div>
+    <button class="btn-link" type="button" data-close="shareModal">Fermer</button>
+  `;
+  openModal("shareModal");
+}
+
+async function copyLink(id) {
+  const c = getById(id);
+  if (!c) return;
+  const { url } = shareData(c);
+  try {
+    await navigator.clipboard.writeText(url);
+    toast("Lien copié !");
+  } catch (err) {
+    prompt("Copiez ce lien :", url);
+  }
+}
+
+async function nativeShareClick(id) {
+  const c = getById(id);
+  if (!c) return;
+  const { url, text } = shareData(c);
+  const ok = window.nativeShare ? await window.nativeShare("TahirCagnotte", text, url) : false;
+  if (!ok) copyLink(id);
 }
 
 /* ---------- CATEGORIES + RECHERCHE ---------- */
@@ -369,4 +512,7 @@ observeUser(user => {
   render();
 });
 
-load();
+load().then(() => {
+  const id = new URLSearchParams(location.search).get("c");
+  if (id) openDetail(id);
+});
