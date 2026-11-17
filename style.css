@@ -1,0 +1,198 @@
+
+/* =================================
+   TAHIRCAGNOTTE - DESIGN PRINCIPAL
+================================= */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  background: #f5f8f6;
+  color: #202b25;
+  padding-bottom: 85px;
+}
+
+/* HEADER */
+
+.header {
+  background: #087f5b;
+  color: white;
+  padding: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header h2 {
+  font-size: 21px;
+}
+
+.header button {
+  background: white;
+  color: #087f5b;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 20px;
+  font-weight: bold;
+}
+
+/* HERO */
+
+.hero {
+  background: linear-gradient(135deg, #087f5b, #16a085);
+  color: white;
+  padding: 35px 20px;
+  text-align: center;
+}
+
+.hero h1 {
+  font-size: 27px;
+  margin-bottom: 15px;
+}
+
+.hero p {
+  font-size: 15px;
+  line-height: 1.6;
+  margin-bottom: 22px;
+}
+
+.hero button {
+  background: #ffffff;
+  color: #087f5b;
+  border: none;
+  padding: 15px 25px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+/* BUTTONS */
+
+button {
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* ACCOUNT */
+
+.account-section {
+  background: white;
+  margin: 20px;
+  padding: 20px;
+  border-radius: 15px;
+  box-shadow: 0 3px 12px #0000000d;
+}
+
+.account-section h2 {
+  font-size: 19px;
+  margin-bottom: 10px;
+}
+
+.account-section p {
+  color: #68736c;
+  font-size: 14px;
+}
+
+/* CAMPAIGNS */
+
+.campaigns {
+  padding: 20px;
+}
+
+.campaigns h2 {
+  font-size: 21px;
+  margin-bottom: 18px;
+}
+
+#campaignList {
+  display: grid;
+  gap: 15px;
+}
+
+/* CAMPAIGN CARD */
+
+.campaign-card {
+  background: white;
+  border-radius: 15px;
+  padding: 18px;
+  box-shadow: 0 3px 12px #0000000d;
+}
+
+.campaign-card h3 {
+  margin-bottom: 10px;
+  color: #087f5b;
+}
+
+.campaign-card p {
+  color: #68736c;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+/* PROGRESS BAR */
+
+.progress {
+  background: #e3eee8;
+  height: 10px;
+  border-radius: 20px;
+  overflow: hidden;
+  margin: 12px 0;
+}
+
+.progress-bar {
+  background: #087f5b;
+  height: 100%;
+  width: 0%;
+}
+
+/* CAMPAIGN BUTTONS */
+
+.campaign-card button {
+  background: #087f5b;
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 10px;
+  margin-top: 10px;
+  width: 100%;
+  font-weight: bold;
+}
+
+/* BOTTOM NAVIGATION */
+
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: white;
+  display: flex;
+  justify-content: space-around;
+  padding: 13px 4px;
+  box-shadow: 0 -3px 12px #00000012;
+}
+
+.bottom-nav button {
+  background: transparent;
+  border: none;
+  color: #087f5b;
+  font-size: 11px;
+  font-weight: bold;
+}
+
+/* RESPONSIVE */
+
+@media (min-width: 700px) {
+  main {
+    max-width: 850px;
+    margin: auto;
+  }
+
+  #campaignList {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  }
