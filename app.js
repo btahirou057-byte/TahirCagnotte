@@ -1,237 +1,372 @@
+import {
+  auth, registerUser, loginUser, logoutUser, observeUser,
+  resetPassword, uploadCover, createCampaign, getCampaigns
+} from "./firebase.js";
 
-/* =================================
-   TAHIRCAGNOTTE - APPLICATION
-================================= */
-
-const campaigns = [];
+const CATEGORIES = ["Santé", "Éducation", "Mariage", "Solidarité", "Famille", "Mosquée", "Projets", "Urgences"];
+const $ = id => document.getElementById(id);
 
 let currentUser = null;
+let campaigns = [];
+let filterCat = "";
+let searchText = "";
+let onlyMine = false;
+let authMode = "login";
 
-// ELEMENTS
-const loginBtn = document.getElementById("loginBtn");
-const createBtn = document.getElementById("createBtn");
-const campaignList = document.getElementById("campaignList");
+/* ---------- OUTILS ---------- */
+const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({
+  "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+}[c]));
 
-// CONNEXION / INSCRIPTION
-loginBtn.addEventListener("click", () => {
-  const action = prompt(
-    "1 = Créer un compte\n2 = Se connecter"
-  );
+const fcfa = n => Number(n || 0).toLocaleString("fr-FR") + " FCFA";
 
-  if (action === "1") {
-    register();
-  } else if (action === "2") {
-    login();
-  }
+function toast(msg) {
+  const t = document.createElement("div");
+  t.className = "toast";
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+function daysLeft(endDate) {
+  if (!endDate) return "";
+  const d = Math.ceil((new Date(endDate + "T23:59:59") - Date.now()) / 86400000);
+  return d < 0 ? "Terminée" : d + " j restants";
+}
+
+/* ---------- THEME ---------- */
+function applyTheme(t) {
+  document.documentElement.dataset.theme = t;
+  $("themeBtn").textContent = t === "dark" ? "☀️" : "🌙";
+}
+applyTheme(
+  localStorage.getItem("tahirTheme") ||
+  (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+);
+$("themeBtn").addEventListener("click", () => {
+  const t = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+  localStorage.setItem("tahirTheme", t);
+  applyTheme(t);
 });
 
-// CREER UN COMPTE
-function register() {
-  const name = prompt("Votre nom :");
-  const email = prompt("Votre email :");
-  const password = prompt("Votre mot de passe :");
+/* ---------- FENETRES ---------- */
+const openModal = id => $(id).classList.remove("hidden");
+const closeModal = id => $(id).classList.add("hidden");
 
-  if (!name || !email || !password) {
-    alert("Veuillez remplir tous les champs.");
-    return;
-  }
+document.addEventListener("click", e => {
+  const c = e.target.closest("[data-close]");
+  if (c) closeModal(c.dataset.close);
+  if (e.target.classList.contains("modal")) e.target.classList.add("hidden");
+  if (e.target.closest("#logoutBtn")) doLogout();
+});
 
-  const user = {
-    name,
-    email,
-    password
+/* ---------- COMPTE ---------- */
+function setAuthMode(mode) {
+  authMode = mode;
+  const labels = {
+    login: ["Connexion", "Se connecter"],
+    register: ["Créer un compte", "S'inscrire"],
+    reset: ["Mot de passe oublié", "Envoyer le lien"]
+  }[mode];
+  $("authTitle").textContent = labels[0];
+  $("authSubmit").textContent = labels[1];
+  $("nameRow").classList.toggle("hidden", mode !== "register");
+  $("passRow").classList.toggle("hidden", mode === "reset");
+  $("toRegister").classList.toggle("hidden", mode === "register");
+  $("toLogin").classList.toggle("hidden", mode === "login");
+  $("toReset").classList.toggle("hidden", mode !== "login");
+}
+
+function openAuth(mode = "login") {
+  setAuthMode(mode);
+  openModal("authModal");
+}
+
+$("toRegister").addEventListener("click", () => setAuthMode("register"));
+$("toLogin").addEventListener("click", () => setAuthMode("login"));
+$("toReset").addEventListener("click", () => setAuthMode("reset"));
+
+function authError(err) {
+  const map = {
+    "auth/invalid-email": "Email invalide.",
+    "auth/invalid-credential": "Email ou mot de passe incorrect.",
+    "auth/user-not-found": "Aucun compte avec cet email.",
+    "auth/wrong-password": "Mot de passe incorrect.",
+    "auth/email-already-in-use": "Cet email est déjà utilisé.",
+    "auth/weak-password": "Mot de passe trop court (6 caractères minimum).",
+    "auth/network-request-failed": "Pas de connexion internet.",
+    "auth/too-many-requests": "Trop d'essais. Réessayez plus tard.",
+    "auth/operation-not-allowed": "Connexion email non activée dans Firebase."
   };
-
-  localStorage.setItem(
-    "tahirUser",
-    JSON.stringify(user)
-  );
-
-  currentUser = user;
-
-  updateAccount();
-
-  alert("Compte de démonstration créé !");
+  return map[err && err.code] || "Une erreur est survenue. Réessayez.";
 }
 
-// SE CONNECTER
-function login() {
-  const email = prompt("Votre email :");
-  const password = prompt("Votre mot de passe :");
+$("authForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const name = $("authName").value.trim();
+  const email = $("authEmail").value.trim();
+  const pass = $("authPass").value;
+  const btn = $("authSubmit");
 
-  const savedUser = JSON.parse(
-    localStorage.getItem("tahirUser")
-  );
+  if (!email) return toast("Entrez votre email.");
+  if (authMode === "register" && !name) return toast("Entrez votre nom.");
+  if (authMode !== "reset" && pass.length < 6) return toast("Mot de passe : 6 caractères minimum.");
 
-  if (
-    savedUser &&
-    savedUser.email === email &&
-    savedUser.password === password
-  ) {
-    currentUser = savedUser;
-    updateAccount();
-    alert("Connexion réussie !");
-  } else {
-    alert("Email ou mot de passe incorrect.");
+  btn.disabled = true;
+  try {
+    if (authMode === "register") {
+      await registerUser(name, email, pass);
+      currentUser = auth.currentUser;
+      updateAccount();
+      toast("Compte créé. Bienvenue !");
+    } else if (authMode === "login") {
+      await loginUser(email, pass);
+      toast("Connexion réussie !");
+    } else {
+      await resetPassword(email);
+      toast("Lien de réinitialisation envoyé par email.");
+      setAuthMode("login");
+      btn.disabled = false;
+      return;
+    }
+    $("authForm").reset();
+    closeModal("authModal");
+  } catch (err) {
+    console.error(err);
+    toast(authError(err));
   }
-}
+  btn.disabled = false;
+});
 
-// AFFICHER LE COMPTE
 function updateAccount() {
-  const section = document.getElementById(
-    "accountSection"
-  );
-
+  const section = $("accountSection");
   if (currentUser) {
     section.innerHTML = `
-      <h2>Bienvenue ${currentUser.name} !</h2>
+      <h2>Bienvenue ${esc(currentUser.displayName || currentUser.email)} !</h2>
       <p>Votre espace TahirCagnotte est prêt.</p>
-      <button onclick="logout()">Déconnexion</button>
+      <button id="logoutBtn" type="button">Déconnexion</button>
     `;
-
-    loginBtn.textContent = "Mon compte";
+    $("loginBtn").textContent = "Mon compte";
+  } else {
+    section.innerHTML = `
+      <h2>Bienvenue sur TahirCagnotte</h2>
+      <p>Connectez-vous pour gérer vos cagnottes.</p>
+    `;
+    $("loginBtn").textContent = "Connexion";
   }
 }
 
-// DECONNEXION
-function logout() {
-  currentUser = null;
-  loginBtn.textContent = "Connexion";
-
-  document.getElementById(
-    "accountSection"
-  ).innerHTML = `
-    <h2>Bienvenue sur TahirCagnotte</h2>
-    <p>Connectez-vous pour gérer vos cagnottes.</p>
-  `;
+async function doLogout() {
+  try {
+    await logoutUser();
+    onlyMine = false;
+    render();
+    toast("Vous êtes déconnecté.");
+  } catch (err) {
+    toast("Déconnexion impossible.");
+  }
 }
 
-// CREER UNE CAGNOTTE
-createBtn.addEventListener("click", () => {
-  if (!currentUser) {
-    alert("Connectez-vous d'abord !");
-    return;
-  }
-
-  const title = prompt("Titre de votre cagnotte :");
-  const description = prompt("Description :");
-  const goal = Number(prompt("Objectif en FCFA :"));
-
-  if (
-    !title ||
-    !description ||
-    !Number.isFinite(goal) ||
-    goal <= 0
-  ) {
-    alert("Informations invalides.");
-    return;
-  }
-
-  const campaign = {
-    id: Date.now().toString(),
-    title,
-    description,
-    goal,
-    collected: 0,
-    owner: currentUser.name
-  };
-
-  campaigns.push(campaign);
-
-  displayCampaigns();
-
-  alert("Votre cagnotte a été créée !");
+$("loginBtn").addEventListener("click", () => {
+  if (currentUser) $("accountSection").scrollIntoView({ behavior: "smooth" });
+  else openAuth("login");
 });
 
-// AFFICHER LES CAGNOTTES
-function displayCampaigns() {
-  campaignList.innerHTML = "";
+/* ---------- CREATION ---------- */
+$("cCat").innerHTML = CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join("");
+const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+$("cDate").min = tomorrow;
 
-  campaigns.forEach(campaign => {
-    const percentage = Math.min(
-      100,
-      (campaign.collected / campaign.goal) * 100
-    );
-
-    const card = document.createElement("div");
-
-    card.className = "campaign-card";
-
-    card.innerHTML = `
-      <h3>${escapeHTML(campaign.title)}</h3>
-      <p>${escapeHTML(campaign.description)}</p>
-      <p>Organisateur : ${escapeHTML(campaign.owner)}</p>
-      <p>Collecté : ${campaign.collected} FCFA</p>
-      <p>Objectif : ${campaign.goal} FCFA</p>
-
-      <div class="progress">
-        <div class="progress-bar"
-          style="width:${percentage}%"></div>
-      </div>
-
-      <button onclick="shareCampaign('${campaign.id}')">
-        Partager ma cagnotte
-      </button>
-    `;
-
-    campaignList.appendChild(card);
-  });
-}
-
-// SECURISER LES TEXTES AFFICHES
-function escapeHTML(value) {
-  return String(value).replace(
-    /[&<>"']/g,
-    char => ({
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;",
-      "'": "&#39;"
-    })[char]
-  );
-}
-
-// PARTAGER UNE CAGNOTTE
-function shareCampaign(id) {
-  const campaign = campaigns.find(
-    item => item.id === id
-  );
-
-  if (!campaign) return;
-
-  const message =
-    "Découvrez ma cagnotte : " +
-    campaign.title +
-    " - Objectif : " +
-    campaign.goal +
-    " FCFA.";
-
-  if (navigator.share) {
-    navigator.share({
-      title: "TahirCagnotte",
-      text: message,
-      url: window.location.href
-    }).catch(() => {});
-  } else {
-    const whatsapp =
-      "https://wa.me/?text=" +
-      encodeURIComponent(message);
-
-    window.open(whatsapp, "_blank");
+$("createBtn").addEventListener("click", () => {
+  if (!currentUser) {
+    toast("Connectez-vous d'abord !");
+    openAuth("login");
+    return;
   }
-}
+  openModal("createModal");
+});
 
-// RESTAURER LE COMPTE DE DEMONSTRATION
-const savedUser = localStorage.getItem("tahirUser");
+$("createForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const title = $("cTitle").value.trim();
+  const description = $("cDesc").value.trim();
+  const goal = Number($("cGoal").value);
+  const category = $("cCat").value;
+  const endDate = $("cDate").value;
+  const file = $("cPhoto").files[0];
 
-if (savedUser) {
+  if (title.length < 3) return toast("Titre trop court.");
+  if (description.length < 10) return toast("Description trop courte.");
+  if (!Number.isFinite(goal) || goal <= 0 || goal > 1000000000) return toast("Objectif invalide.");
+  if (!endDate || endDate < tomorrow) return toast("Choisissez une date de fin à venir.");
+
+  const btn = $("createSubmit");
+  btn.disabled = true;
+  btn.textContent = "Publication...";
+
   try {
-    currentUser = JSON.parse(savedUser);
-    updateAccount();
-  } catch {
-    localStorage.removeItem("tahirUser");
+    let coverUrl = "";
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast("Photo trop lourde (5 Mo max). Publiée sans photo.");
+      } else {
+        try {
+          coverUrl = await uploadCover(file);
+        } catch (err) {
+          console.error(err);
+          toast("Photo non envoyée. Publiée sans photo.");
+        }
+      }
+    }
+    await createCampaign({ title, description, goal, category, endDate, coverUrl });
+    $("createForm").reset();
+    closeModal("createModal");
+    toast("Votre cagnotte est publiée !");
+    await load();
+  } catch (err) {
+    console.error(err);
+    toast("Publication impossible. Vérifiez votre connexion.");
   }
+  btn.disabled = false;
+  btn.textContent = "Publier la cagnotte";
+});
+
+/* ---------- AFFICHAGE ---------- */
+function cardHTML(c) {
+  const goal = Number(c.goal) || 1;
+  const collected = Number(c.collected) || 0;
+  const pct = Math.min(100, Math.round((collected / goal) * 100));
+  const cover = /^https:\/\//.test(c.coverUrl || "")
+    ? `<img class="cover" src="${esc(c.coverUrl)}" alt="" loading="lazy">` : "";
+  return `
+    <div class="campaign-card">
+      ${cover}
+      <span class="chip-cat">${esc(c.category || "Projets")}</span>
+      <h3>${esc(c.title)}</h3>
+      <p>${esc(String(c.description || "").slice(0, 140))}</p>
+      <p>Organisateur : ${esc(c.ownerName)}</p>
+      <p>Collecté : ${fcfa(collected)}</p>
+      <p>Objectif : ${fcfa(goal)}</p>
+      <div class="progress"><div class="progress-bar" style="width:${pct}%"></div></div>
+      <p>${pct}% ${c.endDate ? "· " + esc(daysLeft(c.endDate)) : ""}</p>
+      <button type="button">Partager ma cagnotte</button>
+    </div>`;
 }
 
-  
+function fill(id, list, emptyMsg) {
+  $(id).innerHTML = list.length
+    ? list.map(cardHTML).join("")
+    : `<p class="empty">${emptyMsg}</p>`;
+}
+
+function pctOf(c) {
+  return (Number(c.collected) || 0) / (Number(c.goal) || 1);
+}
+
+function render() {
+  const q = searchText.trim().toLowerCase();
+  const active = campaigns.filter(c => c.status === "active");
+  const filtering = Boolean(q || filterCat || onlyMine);
+
+  let list = active;
+  if (filterCat) list = list.filter(c => c.category === filterCat);
+  if (onlyMine) list = list.filter(c => currentUser && c.ownerId === currentUser.uid);
+  if (q) {
+    list = list.filter(c =>
+      [c.title, c.description, c.ownerName].join(" ").toLowerCase().includes(q)
+    );
+  }
+
+  $("homeSections").classList.toggle("hidden", filtering);
+  $("listTitle").textContent = onlyMine ? "Mes cagnottes"
+    : filtering ? "Résultats" : "Découvrir les cagnottes";
+
+  if (!filtering) {
+    fill("listPopular", [...active].sort((a, b) => (b.collected || 0) - (a.collected || 0)).slice(0, 4),
+      "Aucune cagnotte pour le moment.");
+    fill("listRecent", active.slice(0, 4), "Aucune cagnotte pour le moment.");
+    fill("listNear",
+      active.filter(c => pctOf(c) >= 0.5 && pctOf(c) < 1)
+        .sort((a, b) => pctOf(b) - pctOf(a)).slice(0, 4),
+      "Aucune cagnotte proche de son objectif.");
+  }
+
+  $("campaignList").innerHTML = list.length
+    ? list.map(cardHTML).join("")
+    : `<p class="empty">${onlyMine ? "Vous n'avez pas encore de cagnotte." : "Aucune cagnotte trouvée."}</p>`;
+}
+
+/* ---------- CATEGORIES + RECHERCHE ---------- */
+function renderCategories() {
+  $("categories").innerHTML = ["", ...CATEGORIES].map(c =>
+    `<button type="button" class="cat-chip ${c === filterCat ? "active" : ""}" data-cat="${c}">${c || "Toutes"}</button>`
+  ).join("");
+}
+
+$("categories").addEventListener("click", e => {
+  const b = e.target.closest("[data-cat]");
+  if (!b) return;
+  filterCat = b.dataset.cat;
+  onlyMine = false;
+  renderCategories();
+  render();
+});
+
+$("searchInput").addEventListener("input", e => {
+  searchText = e.target.value;
+  onlyMine = false;
+  render();
+});
+
+/* ---------- NAVIGATION ---------- */
+$("homeBtn").addEventListener("click", () => {
+  filterCat = ""; searchText = ""; onlyMine = false;
+  $("searchInput").value = "";
+  renderCategories();
+  render();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+});
+
+$("exploreBtn").addEventListener("click", () => {
+  onlyMine = false;
+  render();
+  $("searchInput").scrollIntoView({ behavior: "smooth", block: "center" });
+  $("searchInput").focus();
+});
+
+$("myCampaignsBtn").addEventListener("click", () => {
+  if (!currentUser) {
+    toast("Connectez-vous pour voir vos cagnottes.");
+    openAuth("login");
+    return;
+  }
+  onlyMine = true;
+  render();
+  $("campaignsSection").scrollIntoView({ behavior: "smooth" });
+});
+
+$("profileBtn").addEventListener("click", () => {
+  if (!currentUser) openAuth("login");
+  else $("accountSection").scrollIntoView({ behavior: "smooth" });
+});
+
+/* ---------- CHARGEMENT ---------- */
+async function load() {
+  try {
+    campaigns = await getCampaigns();
+  } catch (err) {
+    console.error(err);
+    toast("Impossible de charger les cagnottes.");
+  }
+  render();
+}
+
+renderCategories();
+
+observeUser(user => {
+  currentUser = user;
+  updateAccount();
+  render();
+});
+
+load();
