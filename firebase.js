@@ -1,10 +1,5 @@
-
-/* =================================
-   TAHIRCAGNOTTE - FIREBASE
-================================= */
-
 import { initializeApp } from
-"https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+"https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js";
 
 import {
   getAuth,
@@ -14,7 +9,7 @@ import {
   onAuthStateChanged,
   updateProfile
 } from
-"https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+"https://www.gstatic.com/firebasejs/13.4.0/firebase-auth.js";
 
 import {
   getFirestore,
@@ -25,28 +20,28 @@ import {
   orderBy,
   serverTimestamp
 } from
-"https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+"https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js";
 
-// CONFIGURATION FIREBASE
-// Remplace les valeurs par celles de ton projet Firebase.
+// CONFIGURATION TAHIRCAGNOTTE
 
 const firebaseConfig = {
-  apiKey: "TON_API_KEY",
-  authDomain: "TON_PROJECT_ID.firebaseapp.com",
-  projectId: "TON_PROJECT_ID",
-  storageBucket: "TON_PROJECT_ID.firebasestorage.app",
-  messagingSenderId: "TON_MESSAGING_SENDER_ID",
-  appId: "TON_APP_ID"
+  apiKey: "AIzaSyBB_3ovdYBTv9DKtcipMCKzy9jwrPlCXYE",
+  authDomain: "tahirou-cagnotte.firebaseapp.com",
+  projectId: "tahirou-cagnotte",
+  storageBucket: "tahirou-cagnotte.firebasestorage.app",
+  messagingSenderId: "268567867511",
+  appId: "1:268567867511:web:c4717dc41d88d76f5cd672"
 };
 
 // INITIALISATION
+
 const app = initializeApp(firebaseConfig);
 
 const auth = getAuth(app);
 
 const db = getFirestore(app);
 
-// CREER UN COMPTE
+// INSCRIPTION
 async function registerUser(name, email, password) {
   const result = await createUserWithEmailAndPassword(
     auth,
@@ -77,7 +72,7 @@ async function logoutUser() {
   await signOut(auth);
 }
 
-// SUIVRE LA CONNEXION
+// SURVEILLER LA CONNEXION
 function observeUser(callback) {
   return onAuthStateChanged(auth, callback);
 }
@@ -85,26 +80,23 @@ function observeUser(callback) {
 // CREER UNE CAGNOTTE
 async function createCampaign(data) {
   if (!auth.currentUser) {
-    throw new Error("Connexion obligatoire.");
+    throw new Error("Vous devez être connecté.");
   }
 
-  return await addDoc(
-    collection(db, "campaigns"),
-    {
-      title: data.title,
-      description: data.description,
-      goal: Number(data.goal),
-      collected: 0,
-      ownerId: auth.currentUser.uid,
-      ownerName: auth.currentUser.displayName || "",
-      currency: "XOF",
-      status: "active",
-      createdAt: serverTimestamp()
-    }
-  );
+  return await addDoc(collection(db, "campaigns"), {
+    title: data.title,
+    description: data.description,
+    goal: Number(data.goal),
+    collected: 0,
+    ownerId: auth.currentUser.uid,
+    ownerName: auth.currentUser.displayName || "",
+    currency: "XOF",
+    status: "active",
+    createdAt: serverTimestamp()
+  });
 }
 
-// RECUPERER LES CAGNOTTES
+// AFFICHER LES CAGNOTTES
 async function getCampaigns() {
   const campaignsQuery = query(
     collection(db, "campaigns"),
@@ -119,8 +111,9 @@ async function getCampaigns() {
   }));
 }
 
-// EXPORTER LES FONCTIONS
+// EXPORTER
 export {
+  app,
   auth,
   db,
   registerUser,
