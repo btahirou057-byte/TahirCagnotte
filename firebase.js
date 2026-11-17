@@ -4,7 +4,7 @@ import {
   signOut, onAuthStateChanged, updateProfile, sendPasswordResetEmail
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import {
-  getFirestore, collection, addDoc, getDocs, doc, setDoc,
+  getFirestore, collection, addDoc, getDocs, getDoc, doc, setDoc,
   query, orderBy, limit, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 import {
@@ -80,8 +80,13 @@ async function getCampaigns() {
   return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 
+async function getCampaign(id) {
+  const snap = await getDoc(doc(db, "campaigns", id));
+  return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+}
+
 export {
   app, auth, db, storage,
   registerUser, loginUser, logoutUser, observeUser, resetPassword,
-  uploadCover, createCampaign, getCampaigns
+  uploadCover, createCampaign, getCampaigns, getCampaign
 };
