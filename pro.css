@@ -96,3 +96,51 @@
 [data-theme="dark"] .btn-link { color: #3ddc9a; }
 [data-theme="dark"] .chip-cat { background: #25362d; color: #3ddc9a; }
 [data-theme="dark"] .modal-box h2 { color: #3ddc9a; }
+/* LOT 2 : page cagnotte, partage, QR */
+.campaign-card .btn-row { display: flex; gap: 8px; margin-top: 10px; }
+.campaign-card .btn-row button { flex: 1; width: auto; margin-top: 0; }
+.campaign-card .btn-row .btn-light { background: #e3eee8; color: #087f5b; }
+
+.detail-cover {
+  width: 100%; height: 190px; object-fit: cover;
+  border-radius: 14px; margin-bottom: 12px;
+}
+.detail-stats { display: flex; gap: 8px; margin: 12px 0; }
+.stat {
+  flex: 1; background: #f0f6f3; border-radius: 12px;
+  padding: 10px 6px; text-align: center;
+}
+.stat b { display: block; font-size: 15px; color: #087f5b; }
+.stat span { font-size: 12px; color: #68736c; }
+
+.modal-box h3 { margin: 16px 0 8px; font-size: 16px; }
+.share-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr);
+  gap: 8px; margin: 8px 0 14px;
+}
+.share-grid a, .share-grid button {
+  display: block; background: #087f5b; color: #fff; border: none;
+  padding: 11px 8px; border-radius: 12px; text-align: center;
+  text-decoration: none; font-size: 14px; font-weight: bold;
+}
+.qr-box { text-align: center; margin: 12px 0; }
+.qr-box img { border-radius: 10px; border: 1px solid #cfe0d7; }
+
+.contrib-list { list-style: none; margin: 6px 0 12px; }
+.contrib-list li {
+  display: flex; justify-content: space-between;
+  padding: 9px 0; border-bottom: 1px solid #e3eee8; font-size: 14px;
+}
+.btn-secondary {
+  width: 100%; background: #e3eee8; color: #087f5b; border: none;
+  padding: 12px; border-radius: 12px; font-size: 15px;
+  font-weight: bold; margin-top: 8px;
+}
+
+[data-theme="dark"] .stat { background: #101a15; }
+[data-theme="dark"] .stat b { color: #3ddc9a; }
+[data-theme="dark"] .stat span { color: #a3b3aa; }
+[data-theme="dark"] .campaign-card .btn-row .btn-light,
+[data-theme="dark"] .btn-secondary { background: #25362d; color: #3ddc9a; }
+[data-theme="dark"] .contrib-list li { border-color: #2a3a32; }
+[data-theme="dark"] .qr-box img { border-color: #2f4338; }
