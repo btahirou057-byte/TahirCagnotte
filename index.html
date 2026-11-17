@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -11,8 +10,8 @@
   <title>TahirCagnotte - Ensemble, réalisons vos projets</title>
 
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="pro.css">
   <link rel="manifest" href="manifest.json">
-
   <link rel="icon" href="icon-192.png">
 </head>
 
@@ -20,22 +19,18 @@
 
   <header class="header">
     <h2>💚 TahirCagnotte</h2>
-    <button id="loginBtn">Connexion</button>
+    <div class="topbar-actions">
+      <button id="themeBtn" type="button" aria-label="Changer le thème">🌙</button>
+      <button id="loginBtn" type="button">Connexion</button>
+    </div>
   </header>
 
   <main>
 
     <section class="hero">
       <h1>Ensemble, réalisons vos projets !</h1>
-
-      <p>
-        Lancez votre cagnotte et partagez-la
-        avec vos amis et votre famille partout.
-      </p>
-
-      <button id="createBtn">
-        + Créer une cagnotte
-      </button>
+      <p>Lancez votre cagnotte et partagez-la avec vos amis et votre famille partout.</p>
+      <button id="createBtn" type="button">+ Créer une cagnotte</button>
     </section>
 
     <section class="account-section" id="accountSection">
@@ -43,22 +38,95 @@
       <p>Connectez-vous pour gérer vos cagnottes.</p>
     </section>
 
-    <section class="campaigns">
-      <h2>Découvrir les cagnottes</h2>
+    <section class="search-wrap">
+      <input id="searchInput" type="search" placeholder="🔎 Rechercher une cagnotte...">
+    </section>
 
-      <div id="campaignList">
-        <p>Aucune cagnotte pour le moment.</p>
-      </div>
+    <div class="categories" id="categories"></div>
+
+    <div id="homeSections">
+      <section class="section-block">
+        <h2>🔥 Cagnottes populaires</h2>
+        <div class="grid" id="listPopular"></div>
+      </section>
+      <section class="section-block">
+        <h2>🆕 Récemment créées</h2>
+        <div class="grid" id="listRecent"></div>
+      </section>
+      <section class="section-block">
+        <h2>🎯 Proches de leur objectif</h2>
+        <div class="grid" id="listNear"></div>
+      </section>
+    </div>
+
+    <section class="campaigns" id="campaignsSection">
+      <h2 id="listTitle">Découvrir les cagnottes</h2>
+      <div id="campaignList"><p class="empty">Chargement...</p></div>
     </section>
 
   </main>
 
   <nav class="bottom-nav">
-    <button id="homeBtn">🏠 Accueil</button>
-    <button id="exploreBtn">🔎 Explorer</button>
-    <button id="myCampaignsBtn">💰 Mes cagnottes</button>
-    <button id="profileBtn">👤 Profil</button>
+    <button id="homeBtn" type="button">🏠 Accueil</button>
+    <button id="exploreBtn" type="button">🔎 Explorer</button>
+    <button id="myCampaignsBtn" type="button">💰 Mes cagnottes</button>
+    <button id="profileBtn" type="button">👤 Profil</button>
   </nav>
+
+  <!-- CONNEXION / INSCRIPTION -->
+  <div class="modal hidden" id="authModal">
+    <div class="modal-box">
+      <h2 id="authTitle">Connexion</h2>
+      <form id="authForm" novalidate>
+        <div id="nameRow" class="hidden">
+          <label for="authName">Nom complet</label>
+          <input id="authName" type="text" autocomplete="name">
+        </div>
+        <label for="authEmail">Email</label>
+        <input id="authEmail" type="email" autocomplete="email">
+        <div id="passRow">
+          <label for="authPass">Mot de passe (6 caractères minimum)</label>
+          <input id="authPass" type="password" autocomplete="current-password">
+        </div>
+        <button class="btn-primary" id="authSubmit" type="submit">Se connecter</button>
+      </form>
+      <div class="auth-links">
+        <button class="btn-link" id="toRegister" type="button">Pas de compte ? S'inscrire</button>
+        <button class="btn-link hidden" id="toLogin" type="button">Déjà un compte ? Se connecter</button>
+        <button class="btn-link" id="toReset" type="button">Mot de passe oublié ?</button>
+      </div>
+      <button class="btn-link" data-close="authModal" type="button">Fermer</button>
+    </div>
+  </div>
+
+  <!-- CREER UNE CAGNOTTE -->
+  <div class="modal hidden" id="createModal">
+    <div class="modal-box">
+      <h2>Créer une cagnotte</h2>
+      <form id="createForm" novalidate>
+        <label for="cTitle">Titre</label>
+        <input id="cTitle" type="text" maxlength="100">
+
+        <label for="cDesc">Description</label>
+        <textarea id="cDesc" rows="4"></textarea>
+
+        <label for="cGoal">Objectif (FCFA)</label>
+        <input id="cGoal" type="number" inputmode="numeric" min="1">
+
+        <label for="cCat">Catégorie</label>
+        <select id="cCat"></select>
+
+        <label for="cDate">Date de fin</label>
+        <input id="cDate" type="date">
+
+        <label for="cPhoto">Photo de couverture (facultatif)</label>
+        <input id="cPhoto" type="file" accept="image/*">
+
+        <button class="btn-primary" id="createSubmit" type="submit">Publier la cagnotte</button>
+      </form>
+      <button class="btn-link" data-close="createModal" type="button">Annuler</button>
+    </div>
+  </div>
 
   <script type="module" src="app.js"></script>
 
@@ -70,6 +138,8 @@
       });
     }
   </script>
+
   <script src="share.js"></script>
+
 </body>
 </html>
