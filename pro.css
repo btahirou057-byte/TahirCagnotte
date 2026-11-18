@@ -144,3 +144,54 @@
 [data-theme="dark"] .btn-secondary { background: #25362d; color: #3ddc9a; }
 [data-theme="dark"] .contrib-list li { border-color: #2a3a32; }
 [data-theme="dark"] .qr-box img { border-color: #2f4338; }
+/* LOT 3 : profil et admin */
+.avatar {
+  width: 96px; height: 96px; border-radius: 50%; object-fit: cover;
+  display: block; margin: 0 auto 10px; border: 3px solid #087f5b;
+  background: #e3eee8;
+}
+.avatar-ph {
+  display: flex; align-items: center; justify-content: center; font-size: 40px;
+}
+.profile-email { text-align: center; color: #68736c; font-size: 14px; margin-bottom: 12px; }
+
+.badge {
+  display: inline-block; padding: 3px 9px; border-radius: 10px;
+  font-size: 12px; font-weight: bold;
+}
+.badge.ok { background: #d3f2e3; color: #087f5b; }
+.badge.off { background: #fde2e0; color: #c0392b; }
+
+.mini-list { list-style: none; margin: 6px 0 12px; }
+.mini-list li {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 8px; padding: 10px 0; border-bottom: 1px solid #e3eee8; font-size: 14px;
+}
+.mini-list .txt { min-width: 0; overflow-wrap: anywhere; }
+.mini-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.mini-actions button {
+  border: none; border-radius: 8px; padding: 7px 10px; font-size: 12px;
+  font-weight: bold; background: #e3eee8; color: #087f5b;
+}
+.mini-actions .danger { background: #fde2e0; color: #c0392b; }
+
+.admin-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin: 10px 0; }
+
+.btn-report {
+  background: transparent; border: none; color: #c0392b;
+  font-weight: bold; padding: 10px 0; width: 100%; font-size: 14px;
+}
+.btn-danger {
+  width: 100%; background: #fde2e0; color: #c0392b; border: none;
+  padding: 12px; border-radius: 12px; font-size: 15px; font-weight: bold; margin-top: 8px;
+}
+
+[data-theme="dark"] .avatar { background: #25362d; }
+[data-theme="dark"] .profile-email { color: #a3b3aa; }
+[data-theme="dark"] .badge.ok { background: #1e3a2d; color: #3ddc9a; }
+[data-theme="dark"] .badge.off { background: #3d2220; color: #ff8a80; }
+[data-theme="dark"] .mini-list li { border-color: #2a3a32; }
+[data-theme="dark"] .mini-actions button { background: #25362d; color: #3ddc9a; }
+[data-theme="dark"] .mini-actions .danger,
+[data-theme="dark"] .btn-danger { background: #3d2220; color: #ff8a80; }
+[data-theme="dark"] .btn-report { color: #ff8a80; }
